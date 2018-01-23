@@ -154,7 +154,7 @@ class Thread implements Context {
         $this->watcher = Loop::repeat(self::EXIT_CHECK_FREQUENCY, static function ($watcher) use ($thread, $channel) {
             if (!$thread->isRunning()) {
                 // Delay closing to avoid race condition between thread exiting and data becoming available.
-                Loop::delay(self::EXIT_CHECK_FREQUENCY, [$channel, "close"]);
+                Loop::unreference(Loop::delay(self::EXIT_CHECK_FREQUENCY, [$channel, "close"]));
                 Loop::cancel($watcher);
             }
         });
@@ -185,6 +185,10 @@ class Thread implements Context {
     private function close() {
         if ($this->channel !== null) {
             $this->channel->close();
+        }
+
+        if (\is_resource($this->socket)) {
+            @\fclose($this->socket);
         }
 
         $this->channel = null;
