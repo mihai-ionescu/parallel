@@ -143,18 +143,22 @@ class Thread implements Context {
 
         list($channel, $this->socket) = $sockets;
 
-        $thread = $this->thread = new Internal\Thread($this->socket, $this->function, $this->args);
+        $this->thread = new Internal\Thread($this->socket, $this->function, $this->args);
 
         if (!$this->thread->start(\PTHREADS_INHERIT_INI)) {
             throw new ContextException('Failed to start the thread.');
         }
 
         $channel = $this->channel = new ChannelledSocket($channel, $channel);
+        $thread = &$this->thread;
 
-        $this->watcher = Loop::repeat(self::EXIT_CHECK_FREQUENCY, static function ($watcher) use ($thread, $channel) {
+        $this->watcher = Loop::repeat(self::EXIT_CHECK_FREQUENCY, static function ($watcher) use (&$thread, $channel) {
             if (!$thread->isRunning()) {
                 // Delay closing to avoid race condition between thread exiting and data becoming available.
-                Loop::unreference(Loop::delay(self::EXIT_CHECK_FREQUENCY, [$channel, "close"]));
+                Loop::unreference(Loop::delay(self::EXIT_CHECK_FREQUENCY, function () use (&$thread, $channel) {
+                    $channel->close();
+                    $thread = null;
+                }));
                 Loop::cancel($watcher);
             }
         });
@@ -191,6 +195,7 @@ class Thread implements Context {
             @\fclose($this->socket);
         }
 
+        $this->thread = null;
         $this->channel = null;
         Loop::cancel($this->watcher);
     }
