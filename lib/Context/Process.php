@@ -72,9 +72,11 @@ class Process implements Context {
             } else {
                 $binary = self::$binaryPath ?? self::locateBinary();
             }
-        } elseif (!\is_executable($binary)) {
-            throw new \Error(\sprintf("The PHP binary path '%s' was not found or is not executable", $binary));
         }
+        // this requires php path to be in open base_dir - not good 
+        // elseif (!\is_executable($binary)) {
+        //     throw new \Error(\sprintf("The PHP binary path '%s' was not found or is not executable", $binary));
+        // }
 
         // Write process runner to external file if inside a PHAR,
         // because PHP can't open files inside a PHAR directly except for the stub.
