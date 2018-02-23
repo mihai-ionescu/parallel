@@ -73,10 +73,15 @@ class Process implements Context {
                 $binary = self::$binaryPath ?? self::locateBinary();
             }
         }
-        // this requires php path to be in open base_dir - not good 
-        // elseif (!\is_executable($binary)) {
-        //     throw new \Error(\sprintf("The PHP binary path '%s' was not found or is not executable", $binary));
-        // }
+        /**
+        * @author mihai
+        * remove else and is_executable call as it requires php to be in open_basedir
+        * php path needs to be set in vhost with AMP_PHP_BINARY - if it's not, all hell breaks loose
+        * @source
+        * elseif (!\is_executable($binary)) {
+        *     throw new \Error(\sprintf("The PHP binary path '%s' was not found or is not executable", $binary));
+        * }
+        */
 
         // Write process runner to external file if inside a PHAR,
         // because PHP can't open files inside a PHAR directly except for the stub.
@@ -108,6 +113,7 @@ class Process implements Context {
     }
 
     private static function locateBinary(): string {
+
         $executable = \strncasecmp(\PHP_OS, "WIN", 3) === 0 ? "php.exe" : "php";
 
         $paths = \array_filter(\explode(\PATH_SEPARATOR, \getenv("PATH")));
